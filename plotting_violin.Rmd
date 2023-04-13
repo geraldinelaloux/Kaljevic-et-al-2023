@@ -1,0 +1,66 @@
+---
+title: "R Notebook Violin plot"
+output: html_notebook
+---
+*Working Directory* 
+```{r, echo=FALSE}
+getwd()
+```
+
+*Input:* arrays of meanfluo intensities calculated in matlab, exported to csv.
+```{r, echo=FALSE}
+
+list.files(pattern="csv")
+```
+
+*Dependencies:* ggplot2, dplyr, tidyr, bactmap
+```{r}
+library(ggplot2)
+library(dplyr)
+library(bactMAP)
+library(tidyr)
+```
+--------------------
+### Import
+```{r}
+meanALL <- lapply(#for each file
+  list.files(pattern="csv"), #open all csvs one by one
+  function(x) read.csv(x, header=FALSE)
+                    %>% t() ##transpose to vertical format
+                    %>% as.data.frame() #from double array to dataframe
+                    %>% mutate(condition=x) %>%
+    rename(meanALL=V1)) %>% #rename the meanALL column
+  bind_rows() #glue all datasets into one dataframe
+
+```
+
+## Plot
+```{r}
+violin <- ggplot(meanALL, #set dataset
+            aes(x=condition, y=meanALL)) + #set x/y axis. I ordered the "condition" smallest first.
+          geom_violin(scale="width", 
+                      fill="grey", 
+                      size=1, 
+                      draw_quantiles=c(0.25,0.50,0.75)) + #quantile lines added. violin is scaled by width because there are many more bdello cells than e.coli cells.
+          theme_classic() #classic theme
+violin
+```
+
+##Mean/median/sd
+```{r, message=FALSE}
+summary <- meanALL%>% group_by(condition) %>% 
+summarise(mean = mean(meanALL),
+median = median(meanALL),
+sd = sd(meanALL))
+summary
+  
+```
+
+##Save
+```{r}
+violin
+ggsave(filename='yourname.PDF',violin,width=8, height=7)
+write.csv(summary, file="yourname.csv") ##csv of mean/med/sd
+save(meanALL, file="yourname.Rda") #the datasat in R format
+
+```
